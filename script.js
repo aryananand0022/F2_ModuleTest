@@ -1,406 +1,354 @@
-let card = []; // Array of All Tasks Items
-let high = []; // Array of High Tasks Items Only
-let medium = []; // Array of Medium Tasks Items Only
-let low = []; // Array of Low Tasks Items Only
+let tasks = {
+  // tasks object for tracking the properties of task item.
+  todo: [],
+  started: [],
+  completed: [],
+};
 
-let cnt_all = 0;
-let cnt_low = 0;
-let cnt_medium = 0;
-let cnt_high = 0;
+let form = document.getElementById("task-form");
+let todo = document.getElementById("todo");
+let started = document.getElementById("started");
+let completed = document.getElementById("completed");
+let dropText = document.getElementsByClassName("drop-text");
 
-let cnt_completed = 0;
-let cnt_completed_low = 0;
+let id = 1;
 
-let cnt_completed_medium = 0;
-
-let cnt_completed_high = 0;
-
-let cnt_started = 0;
-
-let all_span = document.getElementById("cnt_all");
-let low_span = document.getElementById("cnt_low");
-let medium_span = document.getElementById("cnt_medium");
-let high_span = document.getElementById("cnt_high");
-
-// Creating empty logo div
-
-let empty_div = document.createElement("div");
-empty_div.id = "empty_logo";
-
-let img = document.createElement("img");
-img.src = "assets/Clipboard.png";
-img.alt = "empty_logo";
-
-let p = document.createElement("p");
-p.innerText = "You have no To-do Items As of now";
-
-empty_div.append(img, p);
-
-let container = document.getElementById("tasks_items");
-container.append(empty_div);
-console.log(empty_div);
-
-// Getting Information From My Form Element
-
-let form = document.getElementById("info");
+// Listening sumbit event on form to create new Task
 form.addEventListener("submit", function (e) {
   e.preventDefault();
 
-  let input1 = document.getElementById("form_input1");
-  let input2 = document.getElementById("form_input2");
+  if (form.button.innerText.trim() === "Save") {
+    form.button.innerHTML = `Add <i class="fa-solid fa-circle-plus"></i>`;
+  }
 
-  let selection = document.getElementById("selection");
-  let form_btn = document.getElementById("submission_btn");
+  document.getElementById("empty-container").style.display = "none";
 
-  //console.log(selection.value);
+  const taskName = form.task.value;
+  const taskDueDate = form.date.value;
+  const taskPriority = form.priority.value;
 
-  let obj = {
-    txt1: input1.value,
-    txt2: input2.value,
-    select: selection.value,
+  const newTask = document.createElement("div");
+  newTask.className = "task-item";
+  newTask.id = id++;
+  newTask.setAttribute("draggable", true);
+  newTask.addEventListener("dragstart", onDragStart);
+
+  newTask.innerHTML = `<div class="header">
+                          <p>Due on ${taskDueDate}</p>
+                          <p class="priority" style="color:${applyColor(
+                            taskPriority.trim()
+                          )};">${taskPriority}</p>
+                      </div>
+                      <div>
+                          <p>${taskName}</p>
+                          <div class="buttons">
+                          </div>
+                      </div>`;
+
+  // Creating edit button for task
+  let editButton = document.createElement("button");
+  editButton.innerHTML = `<i class="fa-regular fa-pen-to-square"></i>`;
+
+  editButton.addEventListener("click", editTask);
+
+  //   Creating Delete button for task
+  let deleteButton = document.createElement("button");
+  deleteButton.innerHTML = `<i class="fa-regular fa-trash-can"></i>`;
+
+  deleteButton.addEventListener("click", deleteTask);
+
+  //   Extracting buttons container
+  newTask.querySelector(".buttons").append(editButton, deleteButton);
+
+  //   Inserting Tast element in the task list
+  todo.insertBefore(newTask, dropText[0]);
+
+  //   function for delete task
+  function deleteTask() {
+    const currentContainerId = newTask.parentNode.id;
+    let index = (tasks[currentContainerId].findIndex = (task) =>
+      task.id === newTask.id);
+    tasks[currentContainerId].splice(index, 1);
+
+    // After delete updating the local storage.
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+    document.getElementById(
+      `${currentContainerId}-count`
+    ).innerText = `${tasks[currentContainerId].length}`;
+    document.getElementById(
+      `${currentContainerId}-high`
+    ).innerText = `${countHigh(tasks[currentContainerId])} of ${
+      tasks[currentContainerId].length
+    }`;
+
+    tasks.todo.length
+      ? (document.getElementById("empty-container").style.display = "none")
+      : (document.getElementById("empty-container").style.display = "flex");
+
+    newTask.remove();
+  }
+
+  //   Creating Task object to store it in local storage.
+  let taskObj = {
+    id: newTask.id,
+    name: taskName,
+    dueDate: taskDueDate,
+    priority: taskPriority,
   };
+  tasks.todo.push(taskObj); //Pushing the new task into the tasks object.
+
+  //   Storing the newly created task in the local storage.
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+  document.getElementById("todo-count").innerText = `${tasks.todo.length}`;
+  document.getElementById("todo-high").innerText = `${countHigh(
+    tasks.todo
+  )} of ${tasks.todo.length}`;
 
   form.reset();
-
-  card.push(obj);
-
-  cnt_all++;
-
-  if (obj.select == "High") {
-    high.push(obj);
-    cnt_high++;
-  } else if (obj.select == "Medium") {
-    medium.push(obj);
-    cnt_medium++;
-  } else {
-    low.push(obj);
-    cnt_low++;
-  }
-
-  empty_div.remove();
-  document.getElementById("filter").selectedIndex = 0;
-
-  Add_items(obj);
 });
 
-// Add Items To My Task Container With id="tasks_items"
-
-function Add_items(obj) {
-  let card_div = document.getElementById("tasks_items");
-
-  // Creating My Tak Div With class="taski"
-
-  let task = document.createElement("div");
-  task.className = "taski";
-
-  let spn_div = document.createElement("div"); // Creating Div element With class="span_2"
-  spn_div.className = "span_2";
-
-  let spn1 = document.createElement("span");
-  let spn2 = document.createElement("span");
-  spn2.className = "span_priority";
-
-  spn1.innerText = obj.txt2;
-  spn2.innerText = obj.select;
-
-  spn_div.append(spn1, spn2); // Append Span Items To My spn_div element
-
-  //input and buttons
-  let input_btn_div = document.createElement("div");
-  input_btn_div.className = "inpbtn";
-
-  let checkbox_input = document.createElement("input");
-  checkbox_input.type = "checkbox";
-  checkbox_input.className = "checking";
-
-  let inp1 = document.createElement("input");
-  inp1.className = "ip";
-  inp1.type = "text";
-  inp1.value = obj.txt1;
-  inp1.setAttribute("readonly", "true");
-
-  let btn1 = document.createElement("button");
-  btn1.className = "btn1 material-icons";
-  btn1.type = "button";
-  let btn2 = document.createElement("button");
-  btn2.className = "btn2 material-icons";
-
-  btn2.type = "button";
-
-  btn1.innerText = "edit";
-  btn2.innerText = "delete";
-  input_btn_div.append(checkbox_input, inp1, btn1, btn2);
-
-  task.append(spn_div, input_btn_div);
-  card_div.append(task);
-
-  all_span.innerText = cnt_all + " of " + cnt_all;
-  low_span.innerText = cnt_low + " of " + cnt_low;
-  medium_span.innerText = cnt_medium + " of " + cnt_medium;
-  high_span.innerText = cnt_high + " of " + cnt_high;
-
-  // checkbox
-
-  checkbox_input.addEventListener("click", (checking) => {
-    inp1.focus();
-
-    if (checking.target.checked) {
-      inp1.removeAttribute("readonly");
-      inp1.style.textDecoration = "line-through";
-      inp1.setAttribute("readonly", "readonly");
-      cnt_completed++;
-
-      if (spn2.innerText == "Low") {
-        cnt_completed_low++;
-      } else if (spn2.innerText == "Medium") {
-        cnt_completed_medium++;
-      } else {
-        cnt_completed_high++;
-      }
-    } else {
-      inp1.removeAttribute("readonly");
-      inp1.style.textDecoration = "none";
-      inp1.setAttribute("readonly", "readonly");
-
-      cnt_completed--;
-      if (cnt_completed < 0) {
-        cnt_completed = 0;
-      }
-
-      if (spn2.innerText == "Low") {
-        cnt_completed_low--;
-        if (cnt_completed_low < 0) {
-          cnt_completed_low = 0;
-        }
-      } else if (spn2.innerText == "Medium") {
-        cnt_completed_medium--;
-        if (cnt_completed_medium < 0) {
-          cnt_completed_medium = 0;
-        }
-      } else {
-        cnt_completed_high--;
-        if (cnt_completed_high < 0) {
-          cnt_completed_high = 0;
-        }
-      }
-    }
-
-    //console.log(inp1.value);
-
-    let completed = document.getElementById("complete_track");
-    completed.innerText = cnt_completed;
-  });
-
-  //deletion
-
-  let myDivs = document.querySelectorAll(".taski");
-  let myButtons = document.querySelectorAll(".btn2");
-
-  myButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      let myDiv = button.closest(".taski");
-      myDiv.focus();
-
-      //console.log(myDiv);  myDiv.lastChild.firstChild.value
-
-      let delete_obj = {
-        txt1: inp1.value,
-        txt2: myDiv.firstChild.firstChild.innerText,
-        select: myDiv.firstChild.lastChild.innerText,
-      };
-
-      myDiv.remove();
-
-      let temp_container = document.getElementById("tasks_items");
-
-      if (temp_container.innerText == "") {
-        p.innerText = "You have no To-do Items As of now";
-
-        temp_container.append(empty_div);
-      }
-
-      for (let i = 0; i < card.length; i++) {
-        if (
-          card[i].txt1 == delete_obj.txt1 &&
-          card[i].txt2 == delete_obj.txt2 &&
-          card[i].select == delete_obj.select
-        ) {
-          cnt_started++;
-          let started = document.getElementById("started_track");
-          started.innerText = cnt_started;
-          card.splice(i, 1);
-          cnt_all--;
-          if (cnt_all < 0) {
-            cnt_all = 0;
-          }
-          all_span.innerText = cnt_all + " of " + cnt_all;
-        }
-      }
-
-      console.log(delete_obj);
-
-      for (let i = 0; i < low.length; i++) {
-        if (
-          low[i].txt1 == delete_obj.txt1 &&
-          low[i].txt2 == delete_obj.txt2 &&
-          low[i].select == delete_obj.select
-        ) {
-          console.log("yes");
-          low.splice(i, 1);
-          cnt_low--;
-          if (cnt_low < 0) {
-            cnt_low = 0;
-          }
-          low_span.innerText = cnt_low + " of " + cnt_low;
-        }
-      }
-
-      for (let i = 0; i < medium.length; i++) {
-        if (
-          medium[i].txt1 == delete_obj.txt1 &&
-          medium[i].txt2 == delete_obj.txt2 &&
-          medium[i].select == delete_obj.select
-        ) {
-          medium.splice(i, 1);
-          cnt_medium--;
-          if (cnt_medium < 0) {
-            cnt_medium = 0;
-          }
-          medium_span.innerText = cnt_medium + " of " + cnt_medium;
-        }
-      }
-
-      for (let i = 0; i < high.length; i++) {
-        if (
-          high[i].txt1 == delete_obj.txt1 &&
-          high[i].txt2 == delete_obj.txt2 &&
-          high[i].select == delete_obj.select
-        ) {
-          high.splice(i, 1);
-          cnt_high--;
-          if (cnt_high < 0) {
-            cnt_high = 0;
-          }
-          high_span.innerText = cnt_high + " of " + cnt_high;
-        }
+//   function for edit task
+function editTask(e) {
+  const currentElementId = e.currentTarget.parentNode.parentNode.parentNode.id;
+  let currentElement = null;
+  for (let key in tasks) {
+    tasks[key].forEach((item, index) => {
+      if (item.id === currentElementId) {
+        currentElement = item;
+        tasks[key].splice(index, 1);
       }
     });
-  });
-
-  // edition
-
-  let prev_text = inp1.value;
-  let new_text;
-
-  btn1.addEventListener("click", () => {
-    if (btn1.innerText == "edit") {
-      inp1.removeAttribute("readonly");
-      inp1.focus();
-      btn1.innerText = "save";
-    } else {
-      inp1.focus();
-
-      new_text = inp1.value;
-      inp1.setAttribute("readonly", "readonly");
-      btn1.innerText = "edit";
-    }
-
-    let check_obj = {
-      txt: new_text,
-      txt1: prev_text,
-      txt2: spn1.innerText,
-      select: spn2.innerText,
-    };
-
-    for (let i = 0; i < card.length; i++) {
-      //console.log(check_obj);
-
-      if (check_obj.txt == undefined) {
-        continue;
-      }
-      if (
-        card[i].txt1 == check_obj.txt1 &&
-        card[i].txt2 == check_obj.txt2 &&
-        card[i].select == check_obj.select
-      ) {
-        // console.log("yes", check_obj.txt);
-
-        card[i].txt1 = check_obj.txt;
-      }
-    }
-  });
+  }
+  form.task.value = currentElement.name;
+  form.date.value = currentElement.dueDate;
+  form.priority.value = currentElement.priority;
+  form.button.innerText = "Save";
+  document.getElementById(currentElementId).remove();
 }
 
-// filter
-let filter_high = document.getElementById("filter");
+// function for couting the highest priority tasks
+function countHigh(arr) {
+  let ans = 0;
+  arr.forEach((item) => {
+    if (item.priority === "High") ans++;
+  });
+  return ans;
+}
 
-filter_high.addEventListener("change", myfilter);
+// Function to apply color based on priority
 
-function myfilter() {
-  let selectedOption = filter_high.options[filter_high.selectedIndex];
+function applyColor(priority) {
+  if (priority === "High") return "red";
+  else if (priority === "Medium") return "blue";
+  else return "yellow";
+}
 
-  if (selectedOption.value == "HIGH") {
-    let taski_div = document.getElementById("tasks_items");
-    taski_div.innerHTML = "";
+// Changing task status (to-do, started or completed)
 
-    high.forEach((e) => {
-      Add_items(e);
-    });
-    cnt_completed_high = 0;
-    let completed = document.getElementById("complete_track");
-    completed.innerText = cnt_completed_high;
+let draggingElement = null;
+let dropIndex = null;
+function onDragStart(e) {
+  draggingElement = e.target;
+}
 
-    if (container.innerHTML == "") {
-      p.innerText = "You have no High Priority To-do Items As of now";
-      container.append(empty_div);
-    }
-  } else if (selectedOption.value == "MEDIUM") {
-    let taski_div = document.getElementById("tasks_items");
-    taski_div.innerHTML = "";
+todo.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropIndex = 0;
+});
 
-    cnt_completed = 0;
-    let completed = document.getElementById("complete_track");
-    completed.innerText = cnt_completed;
+started.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropIndex = 1;
+});
 
-    medium.forEach((e) => {
-      Add_items(e);
-    });
-    if (container.innerHTML == "") {
-      p.innerText = "You have no Medium Priority To-do Items As of now";
+completed.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropIndex = 2;
+});
 
-      container.append(empty_div);
-    }
-  } else if (selectedOption.value == "LOW") {
-    let taski_div = document.getElementById("tasks_items");
-    taski_div.innerHTML = "";
+// Adding drop event listener to all sections
+todo.addEventListener("drop", dropElement);
+started.addEventListener("drop", dropElement);
+completed.addEventListener("drop", dropElement);
 
-    cnt_completed = 0;
-    let completed = document.getElementById("complete_track");
-    completed.innerText = cnt_completed;
+// Function for droping the task
+function dropElement(e) {
+  const prevContainerId = draggingElement.parentNode.id;
+  const currentContainerId = e.currentTarget.id;
 
-    low.forEach((e) => {
-      Add_items(e);
-    });
-    if (container.innerHTML == "") {
-      p.innerText = "You have no Low Priority To-do Items As of now";
+  let index = tasks[prevContainerId].findIndex(
+    (task) => task.id === draggingElement.id
+  );
 
-      container.append(empty_div);
-    }
-  } else {
-    let taski_div = document.getElementById("tasks_items");
-    taski_div.innerHTML = "";
+  tasks[currentContainerId].push(tasks[prevContainerId][index]);
+  tasks[prevContainerId].splice(index, 1);
 
-    cnt_completed = 0;
-    let completed = document.getElementById("complete_track");
-    completed.innerText = cnt_completed;
+  //   After modification, updating the local storage.
+  localStorage.setItem("tasks", JSON.stringify(tasks));
 
-    card.forEach((e) => {
-      Add_items(e);
-    });
-    if (container.innerHTML == "") {
-      p.innerText = "You have no To-do Items As of now";
+  //   Decreesing the count of Element from previous container
+  document.getElementById(
+    `${prevContainerId}-count`
+  ).innerText = `${tasks[prevContainerId].length}`;
+  document.getElementById(`${prevContainerId}-high`).innerText = `${countHigh(
+    tasks[prevContainerId]
+  )} of ${tasks[prevContainerId].length}`;
 
-      container.append(empty_div);
+  //   Increesing the count of Element in current container
+  document.getElementById(
+    `${currentContainerId}-count`
+  ).innerText = `${tasks[currentContainerId].length}`;
+  document.getElementById(
+    `${currentContainerId}-high`
+  ).innerText = `${countHigh(tasks[currentContainerId])} of ${
+    tasks[currentContainerId].length
+  }`;
+
+  tasks.todo.length
+    ? (document.getElementById("empty-container").style.display = "none")
+    : (document.getElementById("empty-container").style.display = "flex");
+
+  //   Adding element in current container
+  e.currentTarget.insertBefore(draggingElement, dropText[dropIndex]);
+  draggingElement = null;
+}
+
+// creating the task if localstorage have any data saved
+
+document.addEventListener("DOMContentLoaded", () => {
+  const extractedData = localStorage.getItem("tasks");
+  let haveData = false;
+  if (extractedData) {
+    tasks = JSON.parse(extractedData);
+    let i = 0;
+    for (let key in tasks) {
+      tasks[key].forEach((item) => {
+        haveData = true;
+        createTask(item.id, item.name, item.dueDate, item.priority, key, i);
+      });
+      i++;
     }
   }
+});
+
+// Function for creating task for stored data in local storage.
+function createTask(id, taskName, taskDueDate, taskPriority, key, i) {
+  const newTask = document.createElement("div");
+  newTask.className = "task-item";
+  newTask.id = id;
+  newTask.setAttribute("draggable", true);
+  newTask.addEventListener("dragstart", onDragStart);
+
+  newTask.innerHTML = `<div class="header">
+                          <p>Due on ${taskDueDate}</p>
+                          <p class="priority" style="color:${applyColor(
+                            taskPriority.trim()
+                          )}">${taskPriority}</p>
+                      </div>
+                      <div>
+                          <p>${taskName}</p>
+                          <div class="buttons">
+                          </div>
+                      </div>`;
+
+  let editButton = document.createElement("button");
+  editButton.innerHTML = `<i class="fa-regular fa-pen-to-square"></i>`;
+
+  editButton.addEventListener("click", editTask);
+
+  let deleteButton = document.createElement("button");
+  deleteButton.innerHTML = `<i class="fa-regular fa-trash-can"></i>`;
+
+  deleteButton.addEventListener("click", deleteTask);
+  newTask.querySelector(".buttons").append(editButton, deleteButton);
+
+  document.getElementById(`${key}`).insertBefore(newTask, dropText[i]);
+
+  //   function for delete
+  function deleteTask() {
+    const currentContainerId = newTask.parentNode.id;
+    let index = (tasks[currentContainerId].findIndex = (task) =>
+      task.id === newTask.id);
+    tasks[currentContainerId].splice(index, 1);
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+    document.getElementById(
+      `${currentContainerId}-count`
+    ).innerText = `${tasks[currentContainerId].length}`;
+    document.getElementById(
+      `${currentContainerId}-high`
+    ).innerText = `${countHigh(tasks[currentContainerId])} of ${
+      tasks[currentContainerId].length
+    }`;
+    tasks.todo.length
+      ? (document.getElementById("empty-container").style.display = "none")
+      : (document.getElementById("empty-container").style.display = "flex");
+
+    newTask.remove();
+  }
+
+  document.getElementById(`${key}-count`).innerText = `${tasks[key].length}`;
+  document.getElementById(`${key}-high`).innerText = `${countHigh(
+    tasks[key]
+  )} of ${tasks[key].length}`;
+  tasks.todo.length
+    ? (document.getElementById("empty-container").style.display = "none")
+    : (document.getElementById("empty-container").style.display = "flex");
 }
+
+// Filter Functionality
+
+const filter = document.getElementById("filter");
+
+// Adding change event for filtering the tasks according to the priorities.
+filter.addEventListener("change", () => {
+  for (let key in tasks) {
+    tasks[key].forEach((item) => {
+      const task = document.getElementById(`${item.id}`);
+      if (task) task.remove();
+    });
+  }
+
+  if (filter.value === "All") {
+    let i = 0;
+    for (let key in tasks) {
+      tasks[key].forEach((item) => {
+        createTask(item.id, item.name, item.dueDate, item.priority, key, i);
+      });
+      i++;
+    }
+    return;
+  }
+
+  let i = 0;
+  for (let key in tasks) {
+    tasks[key].forEach((item) => {
+      if (item.priority === filter.value)
+        createTask(item.id, item.name, item.dueDate, item.priority, key, i);
+    });
+    i++;
+  }
+});
+
+//filtering data based on Search query.
+
+const search = document.getElementById("search-input");
+
+// Fuction for showing the tasks according to the search query.
+search.addEventListener("input", () => {
+  filter.value = "All";
+  for (let key in tasks) {
+    tasks[key].forEach((item) => {
+      const task = document.getElementById(`${item.id}`);
+      if (task) task.remove();
+    });
+  }
+
+  let i = 0;
+  for (let key in tasks) {
+    tasks[key].forEach((item) => {
+      if (item.name.toLowerCase().includes(search.value.toLowerCase()))
+        createTask(item.id, item.name, item.dueDate, item.priority, key, i);
+    });
+    i++;
+  }
+});
